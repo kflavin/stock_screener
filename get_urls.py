@@ -4,19 +4,49 @@ import aiohttp
 from bs4 import BeautifulSoup as bs
 import sys
 import csv
+import pdb
+from collections import namedtuple
 
 symbol_file = "./symbols"
-results_file = "./stock_screener2"
+results_file = "./stocks_screened.csv"
 
 abbr = {
     'pb': "Price/Book",
-        'ps': "Price/Sales"
-        }
+    'ps': "Price/Sales",
+    'peg': "PEG Ratio",
+}
 
 stock_values = {}
+Stock = namedtuple('Stock', 'symbol sector subsector')
 
-symbol = "blah"
 url = "http://finance.yahoo.com/q/ks?s=%s+Key+Statistics"
+
+sem = asyncio.Semaphore(20)
+
+def get_field(line, field, delimiter=","):
+    """
+    Need something smarter than split, because commas could be embedded inside quotes.
+    """
+
+    flag = False
+    token = ""
+    field_no = 0
+    for ch in line:
+        if ch == '"':
+            flag = not flag
+            continue
+
+        if not flag:
+            if ch == delimiter:
+                if field_no == field:
+                    return token
+                else:
+                    field_no += 1
+                    token = ""
+                    continue
+        token += ch
+                
+
 
 def get_stock_list(filename):
     f = open(filename, "r")
@@ -31,7 +61,9 @@ def get_stock_list(filename):
         ext = ""
 
     if ext == "csv":
-        stock_list = [line.split(",")[0] for line in stocks if line]
+        stock_list = [Stock(symbol=get_field(line, 0),
+                            sector=get_field(line, 3),
+                            subsector=get_field(line, 4)) for line in stocks if line]
     else:
         for stock in stocks:
             stock = stock.strip()
@@ -40,30 +72,48 @@ def get_stock_list(filename):
 
     return stock_list
 
-def get_values(body):
+def build_values(body, stock):
+    """
+    Grab Values from 
+    """
     stock_values = {}
+    #for field in stock._fields:
+        #stock_values[field] = getattr(stock, field)
+    print(stock_values)
+    sys.exit()
+
     soup = bs(body, "html.parser")
     for td in soup.findAll("td"):
         if td.text.startswith(abbr['pb']):
         # price to book
-            pb = td.findNext().text
+            #pb = td.findNext().text
+            pb = td.findNextSibling().text
             stock_values['pb'] = pb
             #values[stock]['pb'] = pb
             #print "%s Price/Book: " % symbol, pb
         elif td.text.startswith(abbr['ps']):
         # price to sales
-            ps = td.findNext().text
+            #ps = td.findNext().text
+            ps = td.findNextSibling().text
             stock_values['ps'] = ps
+            #print "%s Price/Sales: " % symbol, ps
+        elif td.text.startswith(abbr['peg']):
+        # peg
+            peg = td.findNextSibling().text
+            stock_values['peg'] = peg
             #print "%s Price/Sales: " % symbol, ps
     return stock_values
 
 
 @asyncio.coroutine
-def do_work(symbol):
-    global stock_values
-    response = yield from aiohttp.request('GET', url % symbol)
+def do_work(stock):
+    global stock_values, sem
+    with (yield from sem):
+        print("grabbed sem", sem, stock.symbol)
+        response = yield from aiohttp.request('GET', url % stock.symbol)
+
     body = yield from response.read()
-    stock_values[symbol] = get_values(body)
+    stock_values[stock.symbol] = build_values(body, stock)
 
 if __name__ == '__main__':
 
@@ -76,14 +126,14 @@ if __name__ == '__main__':
     stocks = get_stock_list(filename)
 
     loop = asyncio.get_event_loop()
-    print("starting loop")
-    f = asyncio.wait([do_work(i) for i in stocks])
+    f = asyncio.wait([do_work(stock) for stock in stocks])
     loop.run_until_complete(f)
-    print("your stocks", stocks)
-    print("your values", stock_values)
+    #print("your stocks", stocks)
+    #print("your values", stock_values)
 
     with open(results_file, 'w') as csvfile:
-        writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        #writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
         # get header vlaues
         headers = list(stock_values[list(stock_values.keys())[0]].keys())
         headers.insert(0, "Symbol")
