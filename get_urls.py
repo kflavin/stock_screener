@@ -79,8 +79,7 @@ def build_values(body, stock):
     stock_values = {}
     #for field in stock._fields:
         #stock_values[field] = getattr(stock, field)
-    print(stock_values)
-    sys.exit()
+    #print(stock_values)
 
     soup = bs(body, "html.parser")
     for td in soup.findAll("td"):
