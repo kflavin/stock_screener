@@ -7,19 +7,27 @@ import csv
 import pdb
 from collections import namedtuple
 
-symbol_file = "./symbols"
 results_file = "./stocks_screened.csv"
 
+# key is the label, value is the search string
 abbr = {
-    'pb': "Price/Book",
-    'ps': "Price/Sales",
-    'peg': "PEG Ratio",
+    'Price/Book': "Price/Book",
+    'Price/Sales': "Price/Sales",
+    'PEG': "PEG Ratio",
+    'ROE (%)': "Return on Equity",
+    'Profit Margin (%)': "Profit Margin",
+    'Operating Margin (%)': "Operating Margin",
+    'Current Ratio': "Current Ratio",
+    'Free Cash Flow': "Levered Free Cash Flow",
 }
 
 stock_values = {}
 Stock = namedtuple('Stock', 'symbol sector subsector')
 
 url = "http://finance.yahoo.com/q/ks?s=%s+Key+Statistics"
+bs_url = "http://finance.yahoo.com/q/bs?s=%s+Balance+Sheet&annual"
+is_url = "http://finance.yahoo.com/q/is?s=%s+Income+Statement&annual"
+cf_url = "http://finance.yahoo.com/q/cf?s=%s+Cash+Flow&annual"
 
 sem = asyncio.Semaphore(20)
 
@@ -72,35 +80,20 @@ def get_stock_list(filename):
 
     return stock_list
 
-def build_values(body, stock):
+def build_values(key_stats, stock):
     """
     Grab Values from 
     """
     stock_values = {}
-    #for field in stock._fields:
-        #stock_values[field] = getattr(stock, field)
-    #print(stock_values)
 
-    soup = bs(body, "html.parser")
+    # Get the values we need from the key statistics page
+    soup = bs(key_stats, "html.parser")
     for td in soup.findAll("td"):
-        if td.text.startswith(abbr['pb']):
-        # price to book
-            #pb = td.findNext().text
-            pb = td.findNextSibling().text
-            stock_values['pb'] = pb
-            #values[stock]['pb'] = pb
-            #print "%s Price/Book: " % symbol, pb
-        elif td.text.startswith(abbr['ps']):
-        # price to sales
-            #ps = td.findNext().text
-            ps = td.findNextSibling().text
-            stock_values['ps'] = ps
-            #print "%s Price/Sales: " % symbol, ps
-        elif td.text.startswith(abbr['peg']):
-        # peg
-            peg = td.findNextSibling().text
-            stock_values['peg'] = peg
-            #print "%s Price/Sales: " % symbol, ps
+        for k,v in abbr.items():
+            if td.text.startswith(v):
+                value = td.findNextSibling().text
+                stock_values[k] = value.strip("%")
+
     return stock_values
 
 
@@ -109,10 +102,17 @@ def do_work(stock):
     global stock_values, sem
     with (yield from sem):
         print("grabbed sem", sem, stock.symbol)
-        response = yield from aiohttp.request('GET', url % stock.symbol)
+        key_response = yield from aiohttp.request('GET', url % stock.symbol)
+        #income_response = yield from aiohttp.request('GET', is_url % stock.symbol)
+        #balance_response = yield from aiohttp.request('GET', bs_url % stock.symbol)
+        #cash_flow_response = yield from aiohttp.request('GET', cf_url % stock.symbol)
 
-    body = yield from response.read()
-    stock_values[stock.symbol] = build_values(body, stock)
+    key_stats = yield from key_response.read()
+    #income = yield from income_response.read()
+    #balance = yield from balance_response.read()
+    #cash_flow = yield from cash_flow_response.read()
+    #stock_values[stock.symbol] = build_values(key_stats, income, balance, cash_flow, stock)
+    stock_values[stock.symbol] = build_values(key_stats, stock)
 
 if __name__ == '__main__':
 
