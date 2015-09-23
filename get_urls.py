@@ -37,6 +37,7 @@ bs_url = "http://finance.yahoo.com/q/bs?s=%s+Balance+Sheet&annual"
 is_url = "http://finance.yahoo.com/q/is?s=%s+Income+Statement&annual"
 cf_url = "http://finance.yahoo.com/q/cf?s=%s+Cash+Flow&annual"
 id_url = "http://finance.yahoo.com/q/in?s=%s+Industry"
+ae_url = "http://finance.yahoo.com/q/ae?s=%s+Analyst+Estimates"
 
 sem = asyncio.Semaphore(20)
 
@@ -92,7 +93,7 @@ def get_stock_list(filename):
 
     return stock_list
 
-def build_values(key_stats, industry_details, stock):
+def build_values(key_stats, industry_details, estimates, stock):
     """
     Take values given from HTTP queries and build a dictionary for the given stock
     """
@@ -110,16 +111,34 @@ def build_values(key_stats, industry_details, stock):
             stock_values["Industry"] = value.strip("%")
 
 
+
+
+    # Get the values we need from the Analyst estimate page
+    soup = bs(estimates, "html.parser")
+    for td in soup.findall("td"):
+        if td.text.startswith("Past 5 Years (per annum)"):
+            value = td.findNextSibling().text
+            stock_values["Past 5 Years"] = value.strip("%")
+        elif td.text.startswith("Next 5 Years (per annum)"):
+            value = td.findNextSibling().text
+            stock_values["Next 5 Years"] = value.strip("%")
+
+
+    # Cleanup any values that were missed, by setting them to ''
     stock_keys = stock_values.keys()
 
     if "Industry" not in stock_keys:
         stock_values["Industry"] = "-"
     if "Sector" not in stock_keys:
         stock_values["Sector"] = "-"
+    if "Past 5 Years" not in stock_keys:
+        stock_values["Past 5 Years"] = "-"
+    if "Next 5 Years" not in stock_keys:
+        stock_values["Next 5 Years"] = "-"
+
 
     # Get the values we need from the key statistics page
     soup = bs(key_stats, "html.parser")
-
 
     # Find all matches from the data
     for k,v in stats.items():
@@ -145,16 +164,23 @@ def do_work(stock):
     with (yield from sem):
         #print("grabbed sem", sem, stock.symbol)
         try:
+            # Requet data
             key_response = yield from aiohttp.request('GET', url % stock.symbol)
             industry_response = yield from aiohttp.request('GET', id_url % stock.symbol)
+            estimate_response = yield from aiohttp.request('GET', ae_url % stock.symbol)
+
+            # Read data
             key_stats = yield from key_response.read()
             industry_details = yield from industry_response.read()
+            estimates = yield from estimate_response.read()
         except:
             print("Failed to retrieve %s" % str(stock))
             key_stats = ""
             industry_details = ""
+            estimates = ""
 
-    stock_values[stock.symbol] = build_values(key_stats, industry_details, stock)
+    # Pass all the HTML values, plus the stock to build_values, to construct our dict
+    stock_values[stock.symbol] = build_values(key_stats, industry_details, estimates, stock)
 
 def compare_values(val1, op, val2):
     try:
