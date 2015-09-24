@@ -10,7 +10,7 @@ from collections import namedtuple, OrderedDict
 results_file = "./stocks_screened.csv"
 
 # Filters
-filters = {'ROE (%)': ">19", 'Profit Margin (%)': '>9', 'Operating Margin (%)': '>9', 'Total Debt/Equity': '<100'}
+filters = {'ROE (%)': ">19", 'Profit Margin (%)': '>9', 'Operating Margin (%)': '>9', 'Total Debt/Equity': '<100', 'Past 5 Years (%)': '>9'}
 
 # Values to fetch from finance page
 # key is the label, value is the search string
@@ -24,6 +24,8 @@ stats['P/E (ttm)'] = {"search": "Trailing P/E"}
 stats['P/E (forward)'] = {"search": "Forward P/E"}
 stats['Current Ratio'] = {"search": "Current Ratio"}
 stats['PEG'] = {"search": "PEG Ratio"}
+stats['Diluted EPS'] = {"search": "Diluted EPS (ttm):"}
+stats['Dividend'] = {"search": "Trailing Annual Dividend Yield"}
 
 # Stock values is a dictionary of named tuples
 #stock_values = {}
@@ -111,19 +113,6 @@ def build_values(key_stats, industry_details, estimates, stock):
             stock_values["Industry"] = value.strip("%")
 
 
-
-
-    # Get the values we need from the Analyst estimate page
-    soup = bs(estimates, "html.parser")
-    for td in soup.findall("td"):
-        if td.text.startswith("Past 5 Years (per annum)"):
-            value = td.findNextSibling().text
-            stock_values["Past 5 Years"] = value.strip("%")
-        elif td.text.startswith("Next 5 Years (per annum)"):
-            value = td.findNextSibling().text
-            stock_values["Next 5 Years"] = value.strip("%")
-
-
     # Cleanup any values that were missed, by setting them to ''
     stock_keys = stock_values.keys()
 
@@ -131,27 +120,44 @@ def build_values(key_stats, industry_details, estimates, stock):
         stock_values["Industry"] = "-"
     if "Sector" not in stock_keys:
         stock_values["Sector"] = "-"
-    if "Past 5 Years" not in stock_keys:
-        stock_values["Past 5 Years"] = "-"
-    if "Next 5 Years" not in stock_keys:
-        stock_values["Next 5 Years"] = "-"
 
 
     # Get the values we need from the key statistics page
     soup = bs(key_stats, "html.parser")
 
     # Find all matches from the data
+    consumed = False
     for k,v in stats.items():
         search = v['search']
+        # Because of a typo on Yahoo finance, make sure we only consume
+        #  the first value (Dividend Yield is listed twice.  We want the rate.)
         for td in soup.findAll("td"):
-            if td.text.startswith(search):
+            if td.text.startswith(search) and not consumed:
                 value = td.findNextSibling().text
                 stock_values[k] = value.strip("%")
+                consumed = True
+        consumed = False
 
     # If the data is missing some matches, put in placeholders
     for k,v in stats.items():
         if k not in stock_keys:
             stock_values[k] = "-"
+
+    # Get the values we need from the Analyst estimate page
+    soup = bs(estimates, "html.parser")
+    for td in soup.findAll("td"):
+        if td.text.startswith("Past 5 Years (per annum)"):
+            value = td.findNextSibling().text
+            stock_values["Past 5 Years (%)"] = value.strip("%")
+        elif td.text.startswith("Next 5 Years (per annum)"):
+            value = td.findNextSibling().text
+            stock_values["Next 5 Years (%)"] = value.strip("%")
+
+    # Cleanup any empty values
+    if "Past 5 Years (%)" not in stock_keys:
+        stock_values["Past 5 Years"] = "-"
+    if "Next 5 Years (%)" not in stock_keys:
+        stock_values["Next 5 Years"] = "-"
 
     return stock_values
 
@@ -182,6 +188,98 @@ def do_work(stock):
     # Pass all the HTML values, plus the stock to build_values, to construct our dict
     stock_values[stock.symbol] = build_values(key_stats, industry_details, estimates, stock)
 
+def get_calculated_values():
+    """
+    Projected EPS and P/E
+    """
+    global stock_values
+    calculated_values = {}
+
+    for k,v in stock_values:
+        calculated_values[k] = {}
+        try:
+            if float(v['Past 5 Years (%)']) > 15.0:
+                calculated_values[k]['projected_eps'] = .15
+            else:
+                calculated_values[k]['projected_eps'] = .10
+        except ValueError:
+            calculated_values[k]['projected_eps'] = "-"
+            
+
+        try:
+            if float(v['P/E (ttm)']) > 20.0:
+                calculated_values[k]['projected_pe'] = 17
+            else:
+                calculated_values[k]['projected_pe'] = 12
+        except ValueError:
+            calculated_values[k]['projected_pe'] = "-"
+
+    return calculated_values
+
+def calculate_future_price(cv):
+    """
+    Calculate projected future price of the stock
+    """
+    global stock_values
+
+    # Calculated compounded growth over 5 years
+    for sv in stock_values:
+        stock, value = sv
+
+        eps = value['Diluted EPS']
+        eps_5_yrs = eps
+        growth = cv[stock]['projected_eps'] + 1.0
+        pe = cv[stock]['projected_pe']
+        dividend = value['Dividend']
+
+        total_eps_5_yrs = 0
+
+        print("projected price for", stock)
+        for i in range(5):
+            print("eps_5_yrs = %s * %s, eps %s" % (eps_5_yrs, growth, total_eps_5_yrs))
+            try:
+                eps_5_yrs = float(eps_5_yrs) * float(growth)
+                total_eps_5_yrs += eps_5_yrs
+            except ValueError:
+                eps_5_yrs = "-"
+                break
+
+
+        # Calculate dividend, if any
+        try:
+            payout_ratio = float(dividend) / float(eps)
+        except ValueError:
+            payout_ratio = 0
+
+        total_paid_dividends = total_eps_5_yrs * payout_ratio
+
+
+        try:
+            price = float(eps_5_yrs) * float(pe) + total_paid_dividends
+            value['Future Price'] = '{:.4f}'.format(price)
+            print("final price = %s, eps in 5 years = %s, total eps in 5 years = %s, dividends paid = %s" % (price, eps_5_yrs, total_eps_5_yrs, total_paid_dividends))
+        except ValueError:
+            value['Future Price'] = "-"
+            print("final price = %s, eps in 5 years = %s, total eps in 5 years = %s, dividends paid = %s" % ("-", eps_5_yrs, total_eps_5_yrs, total_paid_dividends))
+
+
+
+
+    print(stock_values)
+
+
+
+    
+    #for k,v in cv.items():
+    #    print("projected price for", k)
+    #    for i in range(5):
+    #        #print("price = %s * %s * 100" %(stock_values[k][1]['Diluted EPS'], v['projected_eps'], 100.0))
+    #        #price = stock_values[k]['Diluted EPS'] * v['projected_eps'] * 100.0
+    #        print(stock_values)
+    #    #print("final price = %s" % price)
+
+        
+
 def compare_values(val1, op, val2):
     try:
         v1 = float(val1)
@@ -211,6 +309,11 @@ if __name__ == '__main__':
 
     # Sort the stocks
     stock_values = sorted(stock_values.items(), key=lambda x: (x[1]['Sector'], x[1]['Industry'], x[1]['ROE (%)'], x[1]['Profit Margin (%)']))
+
+    # project EPS and P/E over next 5 years
+    calculated_values = get_calculated_values()
+    calculate_future_price(calculated_values)
+    sys.exit()
 
 
     # Apply filtering.  Keep the stocks we want in stock_picks
@@ -264,21 +367,24 @@ if __name__ == '__main__':
     # I'm just blowing away stock_values for now.
     stock_values = stock_picks
 
-    # Write out values to CSV file
-    with open(results_file, 'w') as csvfile:
-        #writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
-        # get header values
-        print(stock_values[list(stock_values.keys())[0]])
-        headers = list(stock_values[list(stock_values.keys())[0]].keys())
-        headers.insert(0, "Symbol")
-        writer.writerow(headers)
+    if stock_values:
+        # Write out values to CSV file
+        with open(results_file, 'w') as csvfile:
+            #writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
+            # get header values
+            print(stock_values[list(stock_values.keys())[0]])
+            headers = list(stock_values[list(stock_values.keys())[0]].keys())
+            headers.insert(0, "Symbol")
+            writer.writerow(headers)
 
-        for n,d in stock_values.items():
-            stats = []
-            for v in d.values():
-                stats.append(v)
-            #writer.writerow(n + values)
-            stats.insert(0, n)
-            writer.writerow(stats)
-        print("localc", results_file)
+            for n,d in stock_values.items():
+                stats = []
+                for v in d.values():
+                    stats.append(v)
+                #writer.writerow(n + values)
+                stats.insert(0, n)
+                writer.writerow(stats)
+            print("localc", results_file)
+    else:
+        print("No results.")
