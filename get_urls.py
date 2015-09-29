@@ -125,6 +125,12 @@ def build_values(key_stats, industry_details, estimates, stock):
     # Get the values we need from the key statistics page
     soup = bs(key_stats, "html.parser")
 
+    try:
+        curr_price = soup.findAll("span", {"class": "time_rtq_ticker"})[0].find_next().get_text()
+    except IndexError:
+        print("Failed to retrieve2 ", stock)
+        curr_price = "-"
+
     # Find all matches from the data
     consumed = False
     for k,v in stats.items():
@@ -139,9 +145,14 @@ def build_values(key_stats, industry_details, estimates, stock):
         consumed = False
 
     # If the data is missing some matches, put in placeholders
+    # If there is no valid data, don't bother using the stock
+    valid = False
     for k,v in stats.items():
         if k not in stock_keys:
             stock_values[k] = "-"
+        else:
+            if not valid:
+                valid = True
 
     # Get the values we need from the Analyst estimate page
     soup = bs(estimates, "html.parser")
@@ -155,9 +166,14 @@ def build_values(key_stats, industry_details, estimates, stock):
 
     # Cleanup any empty values
     if "Past 5 Years (%)" not in stock_keys:
-        stock_values["Past 5 Years"] = "-"
+        stock_values["Past 5 Years (%)"] = "-"
     if "Next 5 Years (%)" not in stock_keys:
-        stock_values["Next 5 Years"] = "-"
+        stock_values["Next 5 Years (%)"] = "-"
+
+    stock_values["Curr Price"] = curr_price
+
+    #if not valid:
+        #stock_values = None
 
     return stock_values
 
@@ -167,6 +183,7 @@ def do_work(stock):
     Retrieve data on each stock ticker symbol.
     """
     global stock_values, sem
+
     with (yield from sem):
         #print("grabbed sem", sem, stock.symbol)
         try:
@@ -180,13 +197,15 @@ def do_work(stock):
             industry_details = yield from industry_response.read()
             estimates = yield from estimate_response.read()
         except:
-            print("Failed to retrieve %s" % str(stock))
+            print("Failed to retrieve1 %s" % str(stock))
             key_stats = ""
             industry_details = ""
             estimates = ""
 
     # Pass all the HTML values, plus the stock to build_values, to construct our dict
-    stock_values[stock.symbol] = build_values(key_stats, industry_details, estimates, stock)
+    values = build_values(key_stats, industry_details, estimates, stock)
+    if values is not None:
+        stock_values[stock.symbol] = values
 
 def get_calculated_values():
     """
@@ -198,6 +217,7 @@ def get_calculated_values():
     for k,v in stock_values:
         calculated_values[k] = {}
         try:
+            print(k, v)
             if float(v['Past 5 Years (%)']) > 15.0:
                 calculated_values[k]['projected_eps'] = .15
             else:
@@ -228,7 +248,11 @@ def calculate_future_price(cv):
 
         eps = value['Diluted EPS']
         eps_5_yrs = eps
-        growth = cv[stock]['projected_eps'] + 1.0
+        try:
+            growth = float(cv[stock]['projected_eps']) + 1.0
+        except:
+            growth = "-"
+
         pe = cv[stock]['projected_pe']
         dividend = value['Dividend']
 
@@ -240,46 +264,49 @@ def calculate_future_price(cv):
             try:
                 eps_5_yrs = float(eps_5_yrs) * float(growth)
                 total_eps_5_yrs += eps_5_yrs
-            except ValueError:
+            except (ValueError, ZeroDivisionError) as e:
                 eps_5_yrs = "-"
                 break
-
 
         # Calculate dividend, if any
         try:
             payout_ratio = float(dividend) / float(eps)
-        except ValueError:
+        except (ValueError, ZeroDivisionError) as e:
             payout_ratio = 0
 
         total_paid_dividends = total_eps_5_yrs * payout_ratio
 
-
+        # Calculate pricing data
         try:
-            price = float(eps_5_yrs) * float(pe) + total_paid_dividends
-            value['Future Price'] = '{:.4f}'.format(price)
-            print("final price = %s, eps in 5 years = %s, total eps in 5 years = %s, dividends paid = %s" % (price, eps_5_yrs, total_eps_5_yrs, total_paid_dividends))
+            future_price = float(eps_5_yrs) * float(pe) + total_paid_dividends
+            value['Future Price'] = '{:.4f}'.format(future_price)
+            print("final future_price = %s, eps in 5 years = %s, total eps in 5 years = %s, dividends paid = %s" % (future_price, eps_5_yrs, total_eps_5_yrs, total_paid_dividends))
         except ValueError:
             value['Future Price'] = "-"
-            print("final price = %s, eps in 5 years = %s, total eps in 5 years = %s, dividends paid = %s" % ("-", eps_5_yrs, total_eps_5_yrs, total_paid_dividends))
+            value['15% Buy'] = "-"
+            value['12% Buy'] = "-"
+            value['Checked'] = "-"
+            print("final future_price = %s, eps in 5 years = %s, total eps in 5 years = %s, dividends paid = %s" % ("-", eps_5_yrs, total_eps_5_yrs, total_paid_dividends))
+        else:
+            # Calculate 12% and 15% purchase prices
+            buy_price = future_price
+            for i in range(5):
+                buy_price = buy_price / 1.15
 
+            value['15% Buy'] = "%.02f" % buy_price
 
+            buy_price = future_price
+            for i in range(5):
+                buy_price = buy_price / 1.12
 
+            value['12% Buy'] = "%.02f" % buy_price
 
-    print(stock_values)
-
-
+            if float(value['Curr Price'].replace(",", "")) < float(value['12% Buy'].replace(",", "")):
+                value['Checked'] = "X"
+            else:
+                value['Checked'] = "-"
 
     
-    #for k,v in cv.items():
-    #    print("projected price for", k)
-    #    for i in range(5):
-    #        #print("price = %s * %s * 100" %(stock_values[k][1]['Diluted EPS'], v['projected_eps'], 100.0))
-    #        #price = stock_values[k]['Diluted EPS'] * v['projected_eps'] * 100.0
-    #        print(stock_values)
-    #    #print("final price = %s" % price)
-
-        
-
 def compare_values(val1, op, val2):
     try:
         v1 = float(val1)
@@ -313,10 +340,9 @@ if __name__ == '__main__':
     # project EPS and P/E over next 5 years
     calculated_values = get_calculated_values()
     calculate_future_price(calculated_values)
-    sys.exit()
-
 
     # Apply filtering.  Keep the stocks we want in stock_picks
+    keep, found_labels = True, True
     for stock,values in stock_values:
         # iterate over all filters and check if the stock's value is acceptable
         for label in values:
@@ -339,32 +365,6 @@ if __name__ == '__main__':
         keep = True
         found_labels = True
 
-
-    ## Apply filtering.  Keep the stocks we want in stock_picks
-    #keep = True
-    #found_labels = True
-    #for key,value in stock_values.items():
-    #    for label in stock_values[key]:
-    #        if label in filters.keys():
-    #            # Get values to compare
-    #            actual = stock_values[key][label]
-    #            op = filters[label][0]
-    #            compare = filters[label][1:]
-    #            if not compare_values(actual, op, compare):
-    #                keep = False
-
-    #    for label in filters.keys():
-    #        if label not in stock_values[key]:
-    #            found_labels = False
-
-    #    if keep and found_labels:
-    #        stock_picks[key] = value
-    #    keep = True
-    #    found_labels = True
-
-    # stock_values = entire S&P500
-    # stock_picks = filtered stocks
-    # I'm just blowing away stock_values for now.
     stock_values = stock_picks
 
     if stock_values:
