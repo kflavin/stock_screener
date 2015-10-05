@@ -10,7 +10,8 @@ from collections import namedtuple, OrderedDict
 results_file = "./stocks_screened.csv"
 
 # Filters
-filters = {'ROE (%)': ">19", 'Profit Margin (%)': '>9', 'Operating Margin (%)': '>9', 'Total Debt/Equity': '<100', 'Past 5 Years (%)': '>9'}
+#filters = {'ROE (%)': ">19", 'Profit Margin (%)': '>9', 'Operating Margin (%)': '>9', 'Total Debt/Equity': '<100', 'Past 5 Years (%)': '>9'}
+filters = {'ROE (%)': ">10", 'Profit Margin (%)': '>5', 'Operating Margin (%)': '>5', 'Total Debt/Equity': '<100', 'Past 5 Years (%)': '>5'}
 
 # Values to fetch from finance page
 # key is the label, value is the search string
@@ -101,6 +102,7 @@ def build_values(key_stats, industry_details, estimates, stock):
     """
     
     stock_values = OrderedDict()
+    stock_values['Checked'] = ""
 
     # Get the values we need from industry details page
     soup = bs(industry_details, "html.parser")
@@ -304,7 +306,7 @@ def calculate_future_price(cv):
             if float(value['Curr Price'].replace(",", "")) < float(value['12% Buy'].replace(",", "")):
                 value['Checked'] = "X"
             else:
-                value['Checked'] = "-"
+                value['Checked'] = ""
 
     
 def compare_values(val1, op, val2):
@@ -373,7 +375,7 @@ if __name__ == '__main__':
             #writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
             writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
             # get header values
-            print(stock_values[list(stock_values.keys())[0]])
+            #print(stock_values[list(stock_values.keys())[0]])
             headers = list(stock_values[list(stock_values.keys())[0]].keys())
             headers.insert(0, "Symbol")
             writer.writerow(headers)
