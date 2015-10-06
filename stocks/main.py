@@ -8,10 +8,7 @@ import pdb
 from collections import namedtuple, OrderedDict
 import logging
 
-logger = logging.getLogger('stocks')
-logger.setLevel(logging.DEBUG)
-sh = logging.StreamHandler()
-logger.addHandler(sh)
+logger = logging.getLogger(__name__)
 
 results_file = "./stocks_screened.csv"
 
@@ -331,13 +328,9 @@ def compare_values(val1, op, val2):
     return eval(expr)
 
 
-if __name__ == '__main__':
 
-    if len(sys.argv) > 1:
-        filename = sys.argv[1]
-    else:
-        print("Usage: %s <stock filename>" % sys.argv[0])
-        sys.exit(1)
+def main(filename):
+    global stock_values
 
     # stocks is a list of namedtuples
     stocks = get_stock_list(filename)
@@ -401,3 +394,6 @@ if __name__ == '__main__':
             print("localc", results_file)
     else:
         print("No results.")
+
+if __name__ == '__main__':
+    main("sp1.csv")

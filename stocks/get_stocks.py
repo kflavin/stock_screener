@@ -331,8 +331,8 @@ def compare_values(val1, op, val2):
     return eval(expr)
 
 
-if __name__ == '__main__':
 
+def main():
     if len(sys.argv) > 1:
         filename = sys.argv[1]
     else:
@@ -346,6 +346,8 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     f = asyncio.wait([do_work(stock) for stock in stocks])
     loop.run_until_complete(f)
+    print("done!")
+    sys.exit()
 
     # Sort the stocks
     stock_values = sorted(stock_values.items(), key=lambda x: (x[1]['Sector'], x[1]['Industry'], x[1]['ROE (%)'], x[1]['Profit Margin (%)']))
@@ -401,3 +403,6 @@ if __name__ == '__main__':
             print("localc", results_file)
     else:
         print("No results.")
+
+if __name__ == '__main__':
+    main()
