@@ -6,41 +6,11 @@ import sys
 import csv
 import pdb
 from collections import namedtuple, OrderedDict
+import logging
 
-results_file = "./stocks_screened.csv"
+from stocks.config import *
 
-# Filters
-#filters = {'ROE (%)': ">19", 'Profit Margin (%)': '>9', 'Operating Margin (%)': '>9', 'Total Debt/Equity': '<100', 'Past 5 Years (%)': '>9'}
-filters = {'ROE (%)': ">10", 'Profit Margin (%)': '>5', 'Operating Margin (%)': '>5', 'Total Debt/Equity': '<100', 'Past 5 Years (%)': '>5'}
-
-# Values to fetch from finance page
-# key is the label, value is the search string
-stats = OrderedDict()
-stats['ROE (%)'] = {"search": "Return on Equity", "filter": ">15"}
-stats['Free Cash Flow'] = {"search": "Levered Free Cash Flow"}
-stats['Profit Margin (%)'] = {"search": "Profit Margin", "filter": ">10"}
-stats['Operating Margin (%)'] = {"search": "Operating Margin", "filter": ">10"}
-stats['Total Debt/Equity'] = {"search": "Total Debt/Equity"}
-stats['P/E (ttm)'] = {"search": "Trailing P/E"}
-stats['P/E (forward)'] = {"search": "Forward P/E"}
-stats['Current Ratio'] = {"search": "Current Ratio"}
-stats['PEG'] = {"search": "PEG Ratio"}
-stats['Diluted EPS'] = {"search": "Diluted EPS (ttm):"}
-stats['Dividend'] = {"search": "Trailing Annual Dividend Yield"}
-
-# Stock values is a dictionary of named tuples
-#stock_values = {}
-stock_values = OrderedDict()
-Stock = namedtuple('Stock', 'symbol sector subsector')
-
-stock_picks = OrderedDict()
-
-url = "http://finance.yahoo.com/q/ks?s=%s+Key+Statistics"
-bs_url = "http://finance.yahoo.com/q/bs?s=%s+Balance+Sheet&annual"
-is_url = "http://finance.yahoo.com/q/is?s=%s+Income+Statement&annual"
-cf_url = "http://finance.yahoo.com/q/cf?s=%s+Cash+Flow&annual"
-id_url = "http://finance.yahoo.com/q/in?s=%s+Industry"
-ae_url = "http://finance.yahoo.com/q/ae?s=%s+Analyst+Estimates"
+logger = logging.getLogger(__name__)
 
 sem = asyncio.Semaphore(20)
 
@@ -260,9 +230,11 @@ def calculate_future_price(cv):
 
         total_eps_5_yrs = 0
 
-        print("projected price for", stock)
+        #print("projected price for", stock)
+        logger.debug("Project price for %s" % stock)
         for i in range(5):
-            print("eps_5_yrs = %s * %s, eps %s" % (eps_5_yrs, growth, total_eps_5_yrs))
+            #print("eps_5_yrs = %s * %s, cum eps %s" % (eps_5_yrs, growth, total_eps_5_yrs))
+            logger.debug("eps_5_yrs: %s + %s, cum eps: %s" % (eps_5_yrs, growth, total_eps_5_yrs)) 
             try:
                 eps_5_yrs = float(eps_5_yrs) * float(growth)
                 total_eps_5_yrs += eps_5_yrs
@@ -282,13 +254,15 @@ def calculate_future_price(cv):
         try:
             future_price = float(eps_5_yrs) * float(pe) + total_paid_dividends
             value['Future Price'] = '{:.4f}'.format(future_price)
-            print("final future_price = %s, eps in 5 years = %s, total eps in 5 years = %s, dividends paid = %s" % (future_price, eps_5_yrs, total_eps_5_yrs, total_paid_dividends))
+            #print("final future_price = %s, eps in 5 years = %s, total eps in 5 years = %s, dividends paid = %s" % (future_price, eps_5_yrs, total_eps_5_yrs, total_paid_dividends))
+            logger.debug("Future price: %s, eps in 5 years: %s, cum eps in 5 years: %s, dividends paid: %s" % (future_price, eps_5_yrs, total_eps_5_yrs, total_paid_dividends))
         except ValueError:
             value['Future Price'] = "-"
             value['15% Buy'] = "-"
             value['12% Buy'] = "-"
             value['Checked'] = "-"
-            print("final future_price = %s, eps in 5 years = %s, total eps in 5 years = %s, dividends paid = %s" % ("-", eps_5_yrs, total_eps_5_yrs, total_paid_dividends))
+            #print("final future_price = %s, eps in 5 years = %s, total eps in 5 years = %s, dividends paid = %s" % ("-", eps_5_yrs, total_eps_5_yrs, total_paid_dividends))
+            logger.debug("Future price: %s, eps in 5 years: %s, cum eps in 5 years: %s, dividends paid: %s" % ("-", eps_5_yrs, total_eps_5_yrs, total_paid_dividends))
         else:
             # Calculate 12% and 15% purchase prices
             buy_price = future_price
@@ -320,13 +294,9 @@ def compare_values(val1, op, val2):
     return eval(expr)
 
 
-if __name__ == '__main__':
 
-    if len(sys.argv) > 1:
-        filename = sys.argv[1]
-    else:
-        print("Usage: %s <stock filename>" % sys.argv[0])
-        sys.exit(1)
+def main(filename):
+    global stock_values
 
     # stocks is a list of namedtuples
     stocks = get_stock_list(filename)
@@ -390,3 +360,6 @@ if __name__ == '__main__':
             print("localc", results_file)
     else:
         print("No results.")
+
+if __name__ == '__main__':
+    main("sp1.csv")
