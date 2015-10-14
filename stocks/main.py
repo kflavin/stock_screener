@@ -2,9 +2,7 @@
 import asyncio
 import aiohttp
 from bs4 import BeautifulSoup as bs
-import sys
 import csv
-import pdb
 from collections import namedtuple, OrderedDict
 import logging
 
