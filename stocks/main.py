@@ -48,7 +48,7 @@ def get_stock_list(filename):
     stock_list = []
 
     try:
-        ext = filename.split(".")[1]
+        ext = filename.split(".")[-1]
     except:
         ext = ""
 
