@@ -4,7 +4,7 @@ import requests
 import csv
 from bs4 import BeautifulSoup as bs
 from collections import OrderedDict
-from stocks.populator_base import Populator
+from stocks.populators.populator_base import Populator
 
 logger = logging.getLogger(__name__)
 
