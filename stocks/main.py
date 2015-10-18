@@ -12,9 +12,11 @@ logger = logging.getLogger(__name__)
 
 sem = asyncio.Semaphore(20)
 
+
 def get_field(line, field, delimiter=","):
     """
-    Need something smarter than split, because commas could be embedded inside quotes.
+    Need something smarter than split,
+    because commas could be embedded inside quotes.
     """
 
     flag = False
@@ -34,12 +36,12 @@ def get_field(line, field, delimiter=","):
                     token = ""
                     continue
         token += ch
-                
 
 
 def get_stock_list(filename):
     """
-    Return a list of stocks to be operated on, either from CSV file or text file.
+    Return a list of stocks to be operated on,
+    either from CSV file or text file.
     """
     f = open(filename, "r")
     stocks = f.read().split("\n")
@@ -55,7 +57,8 @@ def get_stock_list(filename):
     if ext == "csv":
         stock_list = [Stock(symbol=get_field(line, 0),
                             sector=get_field(line, 3),
-                            subsector=get_field(line, 4)) for line in stocks if line]
+                            subsector=get_field(line, 4))
+                      for line in stocks if line]
     else:
         for stock in stocks:
             stock = stock.strip()
@@ -64,11 +67,13 @@ def get_stock_list(filename):
 
     return stock_list
 
+
 def build_values(key_stats, industry_details, estimates, stock):
     """
-    Take values given from HTTP queries and build a dictionary for the given stock
+    Take values given from HTTP queries
+    and build a dictionary for the given stock
     """
-    
+
     stock_values = OrderedDict()
     stock_values['Checked'] = ""
 
@@ -82,7 +87,6 @@ def build_values(key_stats, industry_details, estimates, stock):
             value = td.findNextSibling().text
             stock_values["Industry"] = value.strip("%")
 
-
     # Cleanup any values that were missed, by setting them to ''
     stock_keys = stock_values.keys()
 
@@ -91,19 +95,21 @@ def build_values(key_stats, industry_details, estimates, stock):
     if "Sector" not in stock_keys:
         stock_values["Sector"] = "-"
 
-
     # Get the values we need from the key statistics page
     soup = bs(key_stats, "html.parser")
 
     try:
-        curr_price = soup.findAll("span", {"class": "time_rtq_ticker"})[0].find_next().get_text()
+        curr_price = soup.findAll("span",
+                                  {"class":
+                                   "time_rtq_ticker"}
+                                  )[0].find_next().get_text()
     except IndexError:
         print("Failed to retrieve2 ", stock)
         curr_price = "-"
 
     # Find all matches from the data
     consumed = False
-    for k,v in stats.items():
+    for k, v in stats.items():
         search = v['search']
         # Because of a typo on Yahoo finance, make sure we only consume
         #  the first value (Dividend Yield is listed twice.  We want the rate.)
@@ -117,7 +123,7 @@ def build_values(key_stats, industry_details, estimates, stock):
     # If the data is missing some matches, put in placeholders
     # If there is no valid data, don't bother using the stock
     valid = False
-    for k,v in stats.items():
+    for k, v in stats.items():
         if k not in stock_keys:
             stock_values[k] = "-"
         else:
@@ -142,10 +148,8 @@ def build_values(key_stats, industry_details, estimates, stock):
 
     stock_values["Curr Price"] = curr_price
 
-    #if not valid:
-        #stock_values = None
-
     return stock_values
+
 
 @asyncio.coroutine
 def do_work(stock):
@@ -155,7 +159,6 @@ def do_work(stock):
     global stock_values, sem
 
     with (yield from sem):
-        #print("grabbed sem", sem, stock.symbol)
         try:
             # Requet data
             key_response = yield from aiohttp.request('GET', url % stock.symbol)
