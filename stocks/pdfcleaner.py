@@ -26,4 +26,3 @@ with open(out_file, 'w') as csvfile:
             ticker = line.split()[-1]
             company = " ".join(line.split()[0:-1])
             writer.writerow((ticker, company))
-        

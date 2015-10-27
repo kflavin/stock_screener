@@ -283,7 +283,7 @@ def calculate_future_price(cv):
             else:
                 value['Checked'] = ""
 
-    
+
 def compare_values(val1, op, val2):
     try:
         v1 = float(val1)

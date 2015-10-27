@@ -21,10 +21,10 @@ def start(debug):
 @click.command()
 @click.option('--index', '-i',
               default="sp500",
-              help='The index to import (sp500)')
+              help='The index to import [sp500|r3k]')
 def populate(index):
     """
-    Populate the given index.
+    Populate the given index with our stocks.
     """
     populate_index(index)
 
@@ -32,10 +32,10 @@ def populate(index):
 @click.command()
 @click.option('--infile', '-i',
               default="sp1.csv",
-              help='The filename of the input file')
+              help='The filename of the input csv')
 def fetch(infile):
     """
-    Fetch stats for symbols given in infile
+    Fetch key stats for symbols given in infile
     """
     main(infile)
 
