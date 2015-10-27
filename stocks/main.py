@@ -156,11 +156,11 @@ def do_work(stock):
     """
     Retrieve data on each stock ticker symbol.
     """
-    global stock_values, sem
+    global stock_values, sem, worker_threads, total_threads
 
     with (yield from sem):
         try:
-            # Requet data
+            # Request data
             key_response = yield from aiohttp.request('GET', url % stock.symbol)
             industry_response = yield from aiohttp.request('GET', id_url % stock.symbol)
             estimate_response = yield from aiohttp.request('GET', ae_url % stock.symbol)
@@ -180,6 +180,9 @@ def do_work(stock):
     if values is not None:
         stock_values[stock.symbol] = values
 
+    worker_threads += 1
+    #print("Finished %s of %s" % (worker_threads, total_threads))
+
 def get_calculated_values():
     """
     Projected EPS and P/E
@@ -190,14 +193,12 @@ def get_calculated_values():
     for k,v in stock_values:
         calculated_values[k] = {}
         try:
-            print(k, v)
             if float(v['Past 5 Years (%)']) > 15.0:
                 calculated_values[k]['projected_eps'] = .15
             else:
                 calculated_values[k]['projected_eps'] = .10
         except ValueError:
             calculated_values[k]['projected_eps'] = "-"
-            
 
         try:
             if float(v['P/E (ttm)']) > 20.0:
@@ -235,7 +236,8 @@ def calculate_future_price(cv):
         logger.debug("Project price for %s" % stock)
         for i in range(5):
             #print("eps_5_yrs = %s * %s, cum eps %s" % (eps_5_yrs, growth, total_eps_5_yrs))
-            logger.debug("eps_5_yrs: %s + %s, cum eps: %s" % (eps_5_yrs, growth, total_eps_5_yrs)) 
+            logger.debug("eps_5_yrs: %s + %s, cum eps: %s" % (eps_5_yrs, growth, total_eps_5_yrs))
+
             try:
                 eps_5_yrs = float(eps_5_yrs) * float(growth)
                 total_eps_5_yrs += eps_5_yrs
@@ -295,16 +297,33 @@ def compare_values(val1, op, val2):
     return eval(expr)
 
 
+@asyncio.coroutine
+def progressbar(total_threads):
+    """Simple progress bar for visual feedback"""
+    global worker_threads
+
+    counter = 0
+    while True:
+        yield from asyncio.sleep(0.1)
+        print ("\r ", counter, "s total threads: ", total_threads, worker_threads, end="")
+        counter += 1
 
 def main(filename):
     global stock_values
+    global worker_threads
+    global total_threads
 
     # stocks is a list of namedtuples
     stocks = get_stock_list(filename)
 
+    # initialize our counters
+    total_threads = len(stocks)
+    worker_threads = 0
+
     # Pull down all the data we'll need via HTTP
     loop = asyncio.get_event_loop()
     f = asyncio.wait([do_work(stock) for stock in stocks])
+    asyncio.async(progressbar(total_threads))
     loop.run_until_complete(f)
 
     # Sort the stocks

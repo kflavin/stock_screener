@@ -23,3 +23,4 @@ def populate_index(index, outfile=None):
 
     populator = module.IndexPopulator(outfile)
     populator.run()
+    return outfile
