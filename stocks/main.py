@@ -54,6 +54,9 @@ def get_stock_list(filename):
     except:
         ext = ""
 
+    # This namedtuple is probably not necessary anymore.  The sector
+    # and subsector fields won't get filled in...  we pull this data
+    # later.
     if ext == "csv":
         stock_list = [Stock(symbol=get_field(line, 0),
                             sector=get_field(line, 3),
@@ -156,7 +159,8 @@ def do_work(stock):
     """
     Retrieve data on each stock ticker symbol.
     """
-    global stock_values, sem, worker_threads, total_threads
+    global stock_values, sem, start_worker_threads, end_worker_threads, total_threads
+    start_worker_threads += 1
 
     with (yield from sem):
         try:
@@ -169,7 +173,7 @@ def do_work(stock):
             key_stats = yield from key_response.read()
             industry_details = yield from industry_response.read()
             estimates = yield from estimate_response.read()
-        except:
+        except Exception as e:
             print("Failed to retrieve1 %s" % str(stock))
             key_stats = ""
             industry_details = ""
@@ -180,7 +184,7 @@ def do_work(stock):
     if values is not None:
         stock_values[stock.symbol] = values
 
-    worker_threads += 1
+    end_worker_threads += 1
     #print("Finished %s of %s" % (worker_threads, total_threads))
 
 def get_calculated_values():
@@ -300,17 +304,17 @@ def compare_values(val1, op, val2):
 @asyncio.coroutine
 def progressbar(total_threads):
     """Simple progress bar for visual feedback"""
-    global worker_threads
+    global worker_threads, start_worker_threads, end_worker_threads
 
-    counter = 0
     while True:
         yield from asyncio.sleep(0.1)
-        print ("\r ", counter, "s total threads: ", total_threads, worker_threads, end="")
-        counter += 1
+        #print ("\r ", counter, "s total threads: ", total_threads, worker_threads, end="")
+        print ("\r", "Starting threads: %s/%s" % (start_worker_threads, total_threads), "Ending threads: %s/%s" % (end_worker_threads, total_threads), end="")
 
 def main(filename):
     global stock_values
-    global worker_threads
+    global start_worker_threads
+    global end_worker_threads
     global total_threads
 
     # stocks is a list of namedtuples
@@ -318,13 +322,15 @@ def main(filename):
 
     # initialize our counters
     total_threads = len(stocks)
-    worker_threads = 0
+    start_worker_threads = 0
+    end_worker_threads = 0
 
     # Pull down all the data we'll need via HTTP
     loop = asyncio.get_event_loop()
     f = asyncio.wait([do_work(stock) for stock in stocks])
     asyncio.async(progressbar(total_threads))
     loop.run_until_complete(f)
+    print("\nDone.\n")
 
     # Sort the stocks
     stock_values = sorted(stock_values.items(), key=lambda x: (x[1]['Sector'], x[1]['Industry'], x[1]['ROE (%)'], x[1]['Profit Margin (%)']))

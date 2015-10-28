@@ -1,16 +1,23 @@
 import logging
 import imp
+import tempfile
+import atexit
+import os
 
 logger = logging.getLogger(__name__)
 
 
 def populate_index(index, outfile=None):
     """
-    Import the necessary populator
+    Import the necessary populator.  Remove the outfile
+    at program exit if it's not passed.
     """
 
     if not outfile:
-        outfile = "%s.new.csv" % index
+        f = tempfile.NamedTemporaryFile(suffix=".csv", delete=False)
+        outfile = f.name
+        f.close()
+        atexit.register(os.unlink, outfile)
 
     populator_name = "populator_%s" % index
 

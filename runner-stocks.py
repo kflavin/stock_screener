@@ -2,6 +2,7 @@ import logging
 import click
 import atexit
 import os
+import tempfile
 from stocks.main import main
 from stocks.populate import populate_index
 
@@ -46,24 +47,16 @@ def fetch(infile):
 @click.command()
 @click.option('--index', '-i',
               default="sp500",
-              help='The index [sp500|r3k]')
-@click.option('--debug', '-d',
-              is_flag="True",
-              help='Debug mode uses a smaller input file.')
-def full_run(index, debug):
+              help='The index [sp500|r3k|debug]')
+@click.option('--ofile', '-o',
+              default=None,
+              help='The index [sp500|r3k|debug]')
+def full_run(index, ofile):
     """
     Fetch key stats for symbols given in infile
     """
-    if debug:
-        stock_list = default_file
-    else:
-        stock_list = populate_index(index, "temp.csv")
-
-    main(stock_list)
-
-    # Only unlink the file if it's the temporary filename
-    if not debug:
-        atexit.register(os.unlink, stock_list)
+    stock_file = populate_index(index, ofile)
+    main(stock_file)
 
 
 # Add all of our actions
