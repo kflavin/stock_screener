@@ -13,6 +13,7 @@ from stocks.populators.populator_base import Populator
 
 logger = logging.getLogger(__name__)
 
+
 class IndexPopulator(Populator):
 
     url = 'http://www.russell.com/documents/indexes/membership/membership-russell-3000.pdf'

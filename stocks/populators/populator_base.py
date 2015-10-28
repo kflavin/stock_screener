@@ -39,6 +39,5 @@ class Populator(object):
                 # Need to find a better way to handle this...
                 writer.writerow([values['symbol'], values['name']])
 
-
     def run(self):
         raise NotImplementedError

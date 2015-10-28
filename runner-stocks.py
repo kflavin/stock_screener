@@ -47,10 +47,10 @@ def fetch(infile):
 @click.command()
 @click.option('--index', '-i',
               default="sp500",
-              help='The index [sp500|r3k|debug]')
+              help='The index [sp500|r3k|random]')
 @click.option('--ofile', '-o',
               default=None,
-              help='The index [sp500|r3k|debug]')
+              help='Specify an output file to save index data.')
 def full_run(index, ofile):
     """
     Fetch key stats for symbols given in infile

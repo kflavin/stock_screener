@@ -26,7 +26,7 @@ def populate_index(index, outfile=None):
         module = imp.load_module(populator_name, *mod_details)
     except ImportError as e:
         logger.error("Could not import module '%s'" % populator_name)
-        return None
+        raise
 
     populator = module.IndexPopulator(outfile)
     populator.run()
