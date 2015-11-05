@@ -5,3 +5,4 @@ pytest
 pyflakes
 pep8
 flake8
+sqlalchemy
