@@ -10,8 +10,6 @@ from sqlalchemy import Sequence
 
 logger = logging.getLogger(__name__)
 
-dbfile = "stocks.db"
-
 Base = declarative_base()
 engine = create_engine('sqlite:///stocks.db', echo=False)
 
@@ -22,8 +20,9 @@ class Company(Base):
     """
     __tablename__ = 'company'
     id = Column(Integer, Sequence('company_id_seq'), primary_key=True)
-    symbol = Column(String(50))
-    name = Column(String(50))
+    symbol = Column(String(50), nullable=False, unique=True)
+    # name = Column(String(50), nullable=False, unique=True)
+    name = Column(String(50), unique=True)
     sector = Column(String(50))
     industry = Column(String(50))
 
@@ -112,7 +111,8 @@ def populate_indicators(stock_values):
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    for symbol, vals in stock_values.items():
+    # for symbol, vals in stock_values.items():
+    for symbol, indicators in stock_values:
         try:
             company = session.query(Company).filter_by(symbol=symbol).one()
         except NoResultFound:
@@ -129,13 +129,13 @@ def populate_indicators(stock_values):
 
         if count >= 1:
             # We already have today's numbers
-            logger.info("Skipping %s" % symbol)
+            logger.debug("Skipping %s" % symbol)
             continue
         else:
-            logger.info("Count for %s is %s" % (symbol, count))
+            logger.debug("Count for %s is %s" % (symbol, count))
 
         inds = {}
-        for ind, val in vals.items():
+        for ind, val in indicators.items():
             if ind.startswith("Checked"):
                 if val:
                     inds['buy'] = True

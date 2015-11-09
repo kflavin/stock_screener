@@ -6,6 +6,7 @@ import csv
 from collections import namedtuple, OrderedDict
 import logging
 
+from stocks.db import populate_indicators
 from stocks.config import *
 
 logger = logging.getLogger(__name__)
@@ -107,7 +108,7 @@ def build_values(key_stats, industry_details, estimates, stock):
                                    "time_rtq_ticker"}
                                   )[0].find_next().get_text()
     except IndexError:
-        print("Failed to retrieve2 ", stock)
+        logger.error("Failed to retrieve2 %s" % str(stock))
         curr_price = "-"
 
     # Find all matches from the data
@@ -174,7 +175,7 @@ def do_work(stock):
             industry_details = yield from industry_response.read()
             estimates = yield from estimate_response.read()
         except Exception as e:
-            print("Failed to retrieve1 %s" % str(stock))
+            logger.error("Failed to retrieve1 %s" % str(stock))
             key_stats = ""
             industry_details = ""
             estimates = ""
@@ -308,8 +309,7 @@ def progressbar(total_threads):
 
     while True:
         yield from asyncio.sleep(0.1)
-        #print ("\r ", counter, "s total threads: ", total_threads, worker_threads, end="")
-        print ("\r", "Starting threads: %s/%s" % (start_worker_threads, total_threads), "Ending threads: %s/%s" % (end_worker_threads, total_threads), end="")
+        print ("\r",  "Threads: %s/%s" % (end_worker_threads, total_threads), end="")
 
 def main(filename):
     global stock_values
@@ -339,6 +339,10 @@ def main(filename):
     calculated_values = get_calculated_values()
     calculate_future_price(calculated_values)
 
+    # Prior to filtering out the stocks we want, store the indicators in the
+    # database
+    populate_indicators(stock_values)
+
     # Apply filtering.  Keep the stocks we want in stock_picks
     keep, found_labels = True, True
     for stock,values in stock_values:
@@ -363,6 +367,7 @@ def main(filename):
         keep = True
         found_labels = True
 
+    import pdb; pdb.set_trace()
     stock_values = stock_picks
 
     if stock_values:

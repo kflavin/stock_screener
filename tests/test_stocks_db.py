@@ -1,20 +1,20 @@
 from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import IntegrityError
 
+import pytest
 from stocks.db import Indicators, Company, Base
 
 
 class TestDatabase(object):
     def setup(self):
-        # print("running setup")
         self.engine = create_engine("sqlite:///:memory:")
         Base.metadata.create_all(self.engine)
         self.Session = sessionmaker(bind=self.engine)
         self.session = self.Session()
 
     def teardown(self):
-        # print("running tearddown")
         Base.metadata.drop_all(self.engine)
 
     def add_one_stock(self, name, symbol, sector, industry):
@@ -78,6 +78,46 @@ class TestDatabase(object):
                                            b15=15.0,
                                            b12=15.0,
                                            )
+        company.indicators.append(indicator)
+
+        query = self.query_for_indicator("AAPL", date)
+        assert len(query) == 1
+
+    def test_dupe_company(self):
+        self.add_one_stock("Apple", "AAPL", "Technology", "Technology")
+
+        with pytest.raises(IntegrityError):
+            self.add_one_stock("Apple", "AAPL", "Technology", "Technology")
+            query = self.query_for_company("AAPL")
+            assert len(query) == 1
+            assert query[0].name == "Apple"
+
+    def test_dupe_indicator(self):
+        company = self.add_one_stock("Apple",
+                                     "AAPL",
+                                     "Technology",
+                                     "Technology")
+        date = datetime.today().date()
+        indicator = self.add_one_indicator(date=date,
+                                           buy=True,
+                                           roe=10.0,
+                                           fcf="150M",
+                                           pm=15.0,
+                                           om=15.0,
+                                           tde=15.0,
+                                           pe=15.0,
+                                           cr=15.0,
+                                           peg=15.0,
+                                           eps=15.0,
+                                           div=15.0,
+                                           pfy=15.0,
+                                           nfy=15.0,
+                                           cp=15.0,
+                                           fp=15.0,
+                                           b15=15.0,
+                                           b12=15.0,
+                                           )
+        company.indicators.append(indicator)
         company.indicators.append(indicator)
 
         query = self.query_for_indicator("AAPL", date)
