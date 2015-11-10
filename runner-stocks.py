@@ -20,14 +20,18 @@ def start(debug):
     logger = logging.getLogger("stocks")
     logger.setLevel(level=debugLevel)
     sh = logging.StreamHandler()
+    sh.setLevel(logging.WARNING)
     logger.addHandler(sh)
+    fh = logging.FileHandler("screener.log")
+    fh.setLevel(logging.DEBUG)
+    logger.addHandler(fh)
 
 
 @click.command()
 @click.option('--index', '-i',
               default="sp500",
               help='The index to import [sp500|r3k]')
-def populate(index):
+def populate(index, count):
     """
     Populate the given index with our stocks.
     """
@@ -51,11 +55,14 @@ def fetch(infile):
 @click.option('--ofile', '-o',
               default=None,
               help='Specify an output file to save index data.')
-def full_run(index, ofile):
+@click.option('--count', '-c',
+              type=click.INT,
+              help='Number of stocks to import.')
+def full_run(index, ofile, count):
     """
     Fetch key stats for symbols given in infile
     """
-    stock_file = populate_index(index, ofile)
+    stock_file = populate_index(index, ofile, count)
     main(stock_file)
 
 

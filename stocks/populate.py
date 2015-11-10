@@ -7,7 +7,7 @@ import os
 logger = logging.getLogger(__name__)
 
 
-def populate_index(index, outfile=None):
+def populate_index(index, outfile=None, count=None):
     """
     Import the necessary populator.  Remove the outfile
     at program exit if it's not passed.
@@ -28,6 +28,10 @@ def populate_index(index, outfile=None):
         logger.error("Could not import module '%s'" % populator_name)
         raise
 
-    populator = module.IndexPopulator(outfile)
+    if count:
+        populator = module.IndexPopulator(outfile, count)
+    else:
+        populator = module.IndexPopulator(outfile)
+
     populator.run()
     return outfile

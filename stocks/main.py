@@ -108,7 +108,7 @@ def build_values(key_stats, industry_details, estimates, stock):
                                    "time_rtq_ticker"}
                                   )[0].find_next().get_text()
     except IndexError:
-        logger.error("Failed to retrieve2 %s" % str(stock))
+        logger.info("Failed to retrieve2 %s" % str(stock))
         curr_price = "-"
 
     # Find all matches from the data
@@ -175,7 +175,7 @@ def do_work(stock):
             industry_details = yield from industry_response.read()
             estimates = yield from estimate_response.read()
         except Exception as e:
-            logger.error("Failed to retrieve1 %s" % str(stock))
+            logger.info("Failed to retrieve1 %s" % str(stock))
             key_stats = ""
             industry_details = ""
             estimates = ""
@@ -309,7 +309,8 @@ def progressbar(total_threads):
 
     while True:
         yield from asyncio.sleep(0.1)
-        print ("\r",  "Threads: %s/%s" % (end_worker_threads, total_threads), end="")
+        print ("\r",  "Populating stocks: %s/%s" % (end_worker_threads+1,
+                                                    total_threads+1), end="")
 
 def main(filename):
     global stock_values
@@ -367,7 +368,6 @@ def main(filename):
         keep = True
         found_labels = True
 
-    import pdb; pdb.set_trace()
     stock_values = stock_picks
 
     if stock_values:
@@ -388,7 +388,8 @@ def main(filename):
                 #writer.writerow(n + values)
                 stats.insert(0, n)
                 writer.writerow(stats)
-            print("localc", results_file)
+        print("Found {0} results: localc {1}".format(len(stock_values),
+                                                     results_file))
     else:
         print("No results.")
 

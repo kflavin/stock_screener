@@ -74,16 +74,24 @@ class Indicators(Base):
                 " date='%s',"
                 " buy='%s',"
                 " roe='%s',"
-                " fcf='%s',"
                 " pm='%s',"
+                " om='%s',"
+                " fcf='%s',"
+                " cr='%s',"
+                " pe='%s',"
+                " tde='%s',"
                 " b15='%s',"
                 " b12='%s',"
                 ")>" % (self.company.symbol,
                         self.date,
                         self.buy,
                         self.roe,
-                        self.fcf,
                         self.pm,
+                        self.om,
+                        self.fcf,
+                        self.cr,
+                        self.pe,
+                        self.tde,
                         self.b15,
                         self.b12,
                         )

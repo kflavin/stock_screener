@@ -13,10 +13,12 @@ class IndexPopulator(Populator):
 
     url = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
 
-    def __init__(self, outfile):
+    def __init__(self, outfile, count=None):
         """
-        Name of CSV file to write out.
+        Name of CSV file to write out and a max count of stocks to return.
+        If count is None, return all.
         """
+        self.count = count
         self.outfile = outfile
 
     def fetch_data(self, url):
@@ -41,7 +43,11 @@ class IndexPopulator(Populator):
         # Grab the headers
         headers = [self.filter_headers(th.text) for th in table('tr')[0]('th')]
 
-        for tr in table('tr'):
+        for idx,tr in enumerate(table('tr')):
+            # If we specified a maximum number of stocks.
+            if self.count and idx >= self.count:
+                break
+
             if tr.td:
                 symbol = tr.td.text
 
