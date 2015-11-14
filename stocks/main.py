@@ -6,7 +6,7 @@ import csv
 from collections import namedtuple, OrderedDict
 import logging
 
-from stocks.db import populate_indicators
+from stocks.db.main import populate_indicators
 from stocks.config import *
 
 logger = logging.getLogger(__name__)
@@ -331,7 +331,6 @@ def main(filename):
     f = asyncio.wait([do_work(stock) for stock in stocks])
     asyncio.async(progressbar(total_threads))
     loop.run_until_complete(f)
-    print("\nDone.\n")
 
     # Sort the stocks
     stock_values = sorted(stock_values.items(), key=lambda x: (x[1]['Sector'], x[1]['Industry'], x[1]['ROE (%)'], x[1]['Profit Margin (%)']))
@@ -370,6 +369,7 @@ def main(filename):
 
     stock_values = stock_picks
 
+    print("\nWriting values to file...")
     if stock_values:
         # Write out values to CSV file
         with open(results_file, 'w') as csvfile:
@@ -392,6 +392,8 @@ def main(filename):
                                                      results_file))
     else:
         print("No results.")
+
+    print("\nDone.\n")
 
 if __name__ == '__main__':
     main("sp1.csv")

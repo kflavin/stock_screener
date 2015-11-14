@@ -4,7 +4,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
 
 import pytest
-from stocks.db import Indicators, Company, Base
+from stocks.db import Base
+from stocks.db.models import Indicators, Company
 
 
 class TestDatabase(object):
