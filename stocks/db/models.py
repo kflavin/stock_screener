@@ -7,6 +7,7 @@ from stocks.db import Base
 
 logger = logging.getLogger(__name__)
 
+
 class Company(Base):
     """
     Model for storing companies.
@@ -42,7 +43,7 @@ class Indicators(Base):
     date = Column(Date)     # Date
     buy = Column(Boolean)   # Is it a buy?
     roe = Column(Float)     # Return on Equity
-    fcf = Column(String)    # Free Cash Flow (may contain 'M' or 'B')
+    fcf = Column(Float, nullable=True)   # Free Cash Flow
     pm = Column(Float)      # Profit Margin(%)
     om = Column(Float)      # Operating Margin (%)
     tde = Column(Float)     # Total Debt/Equity (%)
