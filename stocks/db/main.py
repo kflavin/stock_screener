@@ -17,7 +17,9 @@ def cast_float(value):
         ret = float(value)
         return ret
     except ValueError:
-        return 0.0
+        # return 0.0
+        # This should be okay... as long as our columsn accept NULL
+        return None
 
 
 def populate_indicators(stock_values):
@@ -64,11 +66,13 @@ def populate_indicators(stock_values):
                 inds['roe'] = cast_float(val)
             elif ind.startswith("Free Cash Flow"):
                 if val[-1] == "B":
-                    cval = float(val[:-1]) * 1000000000
+                    cval = float(val[:-1]) * 1000000000.0
                 elif val[-1] == "M":
-                    cval = float(val[:-1]) * 1000000
+                    cval = float(val[:-1]) * 1000000.0
+                elif val[-1] == "K":
+                    cval = float(val[:-1]) * 1000.0
                 else:
-                    cval = val
+                    cval = cast_float(val)
 
                 inds['fcf'] = cval
             elif ind.startswith("Profit Margin"):
