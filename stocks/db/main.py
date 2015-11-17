@@ -6,6 +6,8 @@ from sqlalchemy.orm import sessionmaker
 from stocks.db import Base
 from stocks.db.models import Company, Indicators
 
+from stocks.config import connection_string
+
 logger = logging.getLogger(__name__)
 
 
@@ -109,5 +111,5 @@ def populate_indicators(stock_values):
         session.add(company)
         session.commit()
 
-engine = create_engine('sqlite:///stocks.db', echo=False)
+engine = create_engine(connection_string, echo=False)
 Base.metadata.create_all(engine)
