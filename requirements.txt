@@ -6,3 +6,6 @@ pyflakes
 pep8
 flake8
 sqlalchemy
+alembic
+psycopg2
+requests
