@@ -1,0 +1,7 @@
+[database]
+engine = <mysql|postgres|sqlite>
+user = <user>
+password = <password>
+database = <database>
+host = <host>
+file = <sqlite file>
