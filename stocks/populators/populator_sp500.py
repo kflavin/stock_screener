@@ -10,6 +10,9 @@ logger = logging.getLogger(__name__)
 
 
 class IndexPopulator(Populator):
+    """
+    Populator for the S&P500.  Pulls all S&P500 stocks from Wikipedia.
+    """
 
     url = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
 
@@ -84,6 +87,9 @@ class IndexPopulator(Populator):
                 writer.writerow([values['symbol'], values['name']])
 
     def run(self):
+        """
+        Fetch the stocks, populate, write CSV
+        """
         page = self.fetch_data(self.url)
         stock_list = self.pop_stock_list(page)
         self.write_csv(stock_list)

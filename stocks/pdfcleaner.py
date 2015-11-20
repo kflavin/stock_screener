@@ -4,10 +4,8 @@ import csv
 russell3k = "membership-russell-3000.text"
 out_file = "russell3000.csv"
 
-f = open(russell3k, "r")
-data = f.read().split("\n")
-f.close()
-
+with open(russell3k, "r") as f:
+    data = f.read().split("\n")
 
 with open(out_file, 'w') as csvfile:
     writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)

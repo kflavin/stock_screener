@@ -4,7 +4,12 @@ logger = logging.getLogger(__name__)
 
 
 class Populator(object):
-    def fetch_data(self, url):
+    """
+    Parent class to be overridden by individual populators.  A populator is
+    responsible for pulling all symbols associated with an index, and any
+    required information for those securities.
+    """
+    def fetch_data(self):
         """
         Fetch the data
         """
@@ -40,4 +45,7 @@ class Populator(object):
                 writer.writerow([values['symbol'], values['name']])
 
     def run(self):
+        """
+        Run the populator
+        """
         raise NotImplementedError

@@ -10,13 +10,16 @@ default_file = "sp10.csv"
 @click.group()
 @click.option('--debug', is_flag=True, default=False)
 def start(debug):
+    """
+    Initialization function.
+    """
     if debug:
-        debugLevel = "DEBUG"
+        debug_level = "DEBUG"
     else:
-        debugLevel = "INFO"
+        debug_level = "INFO"
 
     logger = logging.getLogger("stocks")
-    logger.setLevel(level=debugLevel)
+    logger.setLevel(level=debug_level)
     sh = logging.StreamHandler()
     sh.setLevel(logging.WARNING)
     logger.addHandler(sh)

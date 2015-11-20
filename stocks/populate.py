@@ -19,13 +19,13 @@ def populate_index(index, outfile=None, count=None):
         f.close()
         atexit.register(os.unlink, outfile)
 
-    populator_name = "populator_%s" % index
+    populator_name = "populator_{0}".format(index)
 
     try:
         mod_details = imp.find_module(populator_name, ["stocks/populators"])
         module = imp.load_module(populator_name, *mod_details)
     except ImportError as e:
-        logger.error("Could not import module '%s'" % populator_name)
+        logger.error("Could not import module '{0}'".format(populator_name))
         raise
 
     if count:
