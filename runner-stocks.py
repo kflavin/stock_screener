@@ -32,7 +32,7 @@ def start(debug):
 @click.option('--index', '-i',
               default="sp500",
               help='The index to import [sp500|r3k]')
-def fetch(index, count):
+def fetch(index):
     """
     Fetch the stocks into a CSV file, given an index.
     """

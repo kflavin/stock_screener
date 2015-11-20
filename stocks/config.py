@@ -51,10 +51,10 @@ if 'database' not in config:
 else:
     engine = config['database']['engine']
     if engine == "sqlite":
-        connection_string = "sqlite:///{}".format(config['database']['file'])
+        connection_string = "sqlite:///{0}".format(config['database']['file'])
     else:
         database = config['database']
-        connection_string = "{}://{}:{}@{}/{}".format(database['engine'],
+        connection_string = "{0}://{1}:{2}@{3}/{4}".format(database['engine'],
                                                       database['user'],
                                                       database['password'],
                                                       database['host'],

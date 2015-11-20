@@ -9,6 +9,9 @@ from stocks.db.models import Indicators, Company
 
 
 class TestDatabase(object):
+    """
+    Tests for database
+    """
     def setup(self):
         self.engine = create_engine("sqlite:///:memory:")
         Base.metadata.create_all(self.engine)

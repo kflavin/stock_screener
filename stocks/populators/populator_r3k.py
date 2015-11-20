@@ -49,7 +49,7 @@ class IndexPopulator(Populator):
             raise(output[1])
 
 
-        with open(self.outfile, "r") as f
+        with open(self.outfile, "r") as f:
             data = f.read().split("\n")
 
         stock_list = OrderedDict()

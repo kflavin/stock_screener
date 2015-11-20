@@ -52,10 +52,10 @@ def populate_indicators(stock_values):
 
         if count >= 1:
             # We already have today's numbers
-            logger.debug("Skipping %s" % symbol)
+            logger.debug("Skipping {0}".format(symbol))
             continue
         else:
-            logger.debug("Count for %s is %s" % (symbol, count))
+            logger.debug("Count for {0} is {1}".format(symbol, count))
 
         inds = {}
         for ind, val in indicators.items():
