@@ -2,10 +2,10 @@ import logging
 import click
 from stocks.main import main
 from stocks.populate import populate_index
+from requests import ConnectionError
 
 # Get rid of this...
 default_file = "sp10.csv"
-
 
 @click.group()
 @click.option('--debug', is_flag=True, default=False)
@@ -18,6 +18,7 @@ def start(debug):
     else:
         debug_level = "INFO"
 
+    global logger
     logger = logging.getLogger("stocks")
     logger.setLevel(level=debug_level)
     sh = logging.StreamHandler()
@@ -74,4 +75,8 @@ start.add_command(fetch)
 start.add_command(run)
 
 if __name__ == '__main__':
-    start()
+    global logger
+    try:
+        start()
+    except ConnectionError:
+        logger.error("Populator could not connect.  Exiting.")

@@ -15,12 +15,15 @@ def cast_float(value):
     """
     Handle bad data.
     """
+    if not value:
+        return None
+
     try:
         ret = float(value)
         return ret
     except ValueError:
         # return 0.0
-        # This should be okay... as long as our columsn accept NULL
+        # This should be okay... as long as our columns accept NULL
         return None
 
 
