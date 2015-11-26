@@ -13,7 +13,11 @@ from stocks.populators.populator_base import Populator
 
 logger = logging.getLogger(__name__)
 
+
 class IndexPopulator(Populator):
+    """
+    Russell 3000 populator.  Pulls all symbols from a PDF on the Russell page.
+    """
 
     url = 'http://www.russell.com/documents/indexes/membership/membership-russell-3000.pdf'
 
@@ -45,9 +49,8 @@ class IndexPopulator(Populator):
             raise(output[1])
 
 
-        f = open(self.outfile, "r")
-        data = f.read().split("\n")
-        f.close()
+        with open(self.outfile, "r") as f:
+            data = f.read().split("\n")
 
         stock_list = OrderedDict()
         headers = ['name', 'symbol',]
@@ -89,6 +92,9 @@ class IndexPopulator(Populator):
             return header
 
     def run(self):
+        """
+        Fetch page, build list, write CSV
+        """
         page = self.fetch_data(self.url)
         stock_list = self.pop_stock_list(page)
         self.write_csv(stock_list)

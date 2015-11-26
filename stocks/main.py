@@ -6,6 +6,7 @@ import csv
 from collections import namedtuple, OrderedDict
 import logging
 
+from stocks.db.main import populate_indicators
 from stocks.config import *
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,9 @@ def get_stock_list(filename):
     except:
         ext = ""
 
+    # This namedtuple is probably not necessary anymore.  The sector
+    # and subsector fields won't get filled in...  we pull this data
+    # later.
     if ext == "csv":
         stock_list = [Stock(symbol=get_field(line, 0),
                             sector=get_field(line, 3),
@@ -104,7 +108,7 @@ def build_values(key_stats, industry_details, estimates, stock):
                                    "time_rtq_ticker"}
                                   )[0].find_next().get_text()
     except IndexError:
-        print("Failed to retrieve2 ", stock)
+        logger.info("Failed to retrieve2 %s" % str(stock))
         curr_price = "-"
 
     # Find all matches from the data
@@ -156,11 +160,12 @@ def do_work(stock):
     """
     Retrieve data on each stock ticker symbol.
     """
-    global stock_values, sem
+    global stock_values, sem, start_worker_threads, end_worker_threads, total_threads
+    start_worker_threads += 1
 
     with (yield from sem):
         try:
-            # Requet data
+            # Request data
             key_response = yield from aiohttp.request('GET', url % stock.symbol)
             industry_response = yield from aiohttp.request('GET', id_url % stock.symbol)
             estimate_response = yield from aiohttp.request('GET', ae_url % stock.symbol)
@@ -169,8 +174,8 @@ def do_work(stock):
             key_stats = yield from key_response.read()
             industry_details = yield from industry_response.read()
             estimates = yield from estimate_response.read()
-        except:
-            print("Failed to retrieve1 %s" % str(stock))
+        except Exception as e:
+            logger.info("Failed to retrieve1 %s" % str(stock))
             key_stats = ""
             industry_details = ""
             estimates = ""
@@ -179,6 +184,9 @@ def do_work(stock):
     values = build_values(key_stats, industry_details, estimates, stock)
     if values is not None:
         stock_values[stock.symbol] = values
+
+    end_worker_threads += 1
+    #print("Finished %s of %s" % (worker_threads, total_threads))
 
 def get_calculated_values():
     """
@@ -190,14 +198,12 @@ def get_calculated_values():
     for k,v in stock_values:
         calculated_values[k] = {}
         try:
-            print(k, v)
             if float(v['Past 5 Years (%)']) > 15.0:
                 calculated_values[k]['projected_eps'] = .15
             else:
                 calculated_values[k]['projected_eps'] = .10
         except ValueError:
             calculated_values[k]['projected_eps'] = "-"
-            
 
         try:
             if float(v['P/E (ttm)']) > 20.0:
@@ -235,7 +241,8 @@ def calculate_future_price(cv):
         logger.debug("Project price for %s" % stock)
         for i in range(5):
             #print("eps_5_yrs = %s * %s, cum eps %s" % (eps_5_yrs, growth, total_eps_5_yrs))
-            logger.debug("eps_5_yrs: %s + %s, cum eps: %s" % (eps_5_yrs, growth, total_eps_5_yrs)) 
+            logger.debug("eps_5_yrs: %s + %s, cum eps: %s" % (eps_5_yrs, growth, total_eps_5_yrs))
+
             try:
                 eps_5_yrs = float(eps_5_yrs) * float(growth)
                 total_eps_5_yrs += eps_5_yrs
@@ -283,7 +290,7 @@ def calculate_future_price(cv):
             else:
                 value['Checked'] = ""
 
-    
+
 def compare_values(val1, op, val2):
     try:
         v1 = float(val1)
@@ -295,16 +302,34 @@ def compare_values(val1, op, val2):
     return eval(expr)
 
 
+@asyncio.coroutine
+def progressbar(total_threads):
+    """Simple progress bar for visual feedback"""
+    global worker_threads, start_worker_threads, end_worker_threads
+
+    while True:
+        yield from asyncio.sleep(0.1)
+        print ("\r",  "Populating stocks: %s/%s" % (end_worker_threads+1,
+                                                    total_threads+1), end="")
 
 def main(filename):
     global stock_values
+    global start_worker_threads
+    global end_worker_threads
+    global total_threads
 
     # stocks is a list of namedtuples
     stocks = get_stock_list(filename)
 
+    # initialize our counters
+    total_threads = len(stocks)
+    start_worker_threads = 0
+    end_worker_threads = 0
+
     # Pull down all the data we'll need via HTTP
     loop = asyncio.get_event_loop()
     f = asyncio.wait([do_work(stock) for stock in stocks])
+    asyncio.async(progressbar(total_threads))
     loop.run_until_complete(f)
 
     # Sort the stocks
@@ -313,6 +338,10 @@ def main(filename):
     # project EPS and P/E over next 5 years
     calculated_values = get_calculated_values()
     calculate_future_price(calculated_values)
+
+    # Prior to filtering out the stocks we want, store the indicators in the
+    # database
+    populate_indicators(stock_values)
 
     # Apply filtering.  Keep the stocks we want in stock_picks
     keep, found_labels = True, True
@@ -340,6 +369,7 @@ def main(filename):
 
     stock_values = stock_picks
 
+    print("\nWriting values to file...")
     if stock_values:
         # Write out values to CSV file
         with open(results_file, 'w') as csvfile:
@@ -358,9 +388,12 @@ def main(filename):
                 #writer.writerow(n + values)
                 stats.insert(0, n)
                 writer.writerow(stats)
-            print("localc", results_file)
+        print("Found {0} results: localc {1}".format(len(stock_values),
+                                                     results_file))
     else:
         print("No results.")
+
+    print("\nDone.\n")
 
 if __name__ == '__main__':
     main("sp1.csv")
