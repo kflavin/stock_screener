@@ -6,11 +6,12 @@ from collections import OrderedDict, namedtuple
 import logging
 logger = logging.getLogger("stocks")
 
-results_file = "./stocks_screened.csv"
+picks_file = "./stocks_screened.csv" # Good companies
+all_file = "./stocks_all.csv"        # Full list of stocks
 
 # Filters
-# filters = {'ROE (%)': ">19", 'Profit Margin (%)': '>9', 'Operating Margin (%)': '>9', 'Total Debt/Equity': '<100', 'Past 5 Years (%)': '>9'}
-filters = {'ROE (%)': ">10", 'Profit Margin (%)': '>5', 'Operating Margin (%)': '>5', 'Total Debt/Equity': '<100', 'Past 5 Years (%)': '>5'}
+filters = {'ROE (%)': ">19", 'Profit Margin (%)': '>9', 'Operating Margin (%)': '>9', 'Total Debt/Equity': '<100', 'Past 5 Years (%)': '>9'}
+#filters = {'ROE (%)': ">10", 'Profit Margin (%)': '>5', 'Operating Margin (%)': '>5', 'Total Debt/Equity': '<100', 'Past 5 Years (%)': '>5'}
 
 # Values to fetch from finance page
 # key is the label, value is the search string
@@ -33,6 +34,7 @@ stock_values = OrderedDict()
 Stock = namedtuple('Stock', 'symbol sector subsector')
 
 stock_picks = OrderedDict()
+stock_all = OrderedDict()
 
 # URL's we need to pull the data we want
 url = "http://finance.yahoo.com/q/ks?s=%s+Key+Statistics"

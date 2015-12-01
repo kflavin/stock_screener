@@ -21,10 +21,11 @@ class IndexPopulator(Populator):
 
     url = 'http://www.russell.com/documents/indexes/membership/membership-russell-3000.pdf'
 
-    def __init__(self, outfile):
+    def __init__(self, outfile, count=None):
         """
         Name of CSV file to write out.
         """
+        self.count = count
         self.outfile = outfile
 
     def fetch_data(self, url):
@@ -58,6 +59,7 @@ class IndexPopulator(Populator):
         #with open(out_file, 'w') as csvfile:
             #writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
 
+        idx = 1
         for line in data:
             if line.startswith("As of ") or \
                 line.startswith("As of ") or \
@@ -69,10 +71,15 @@ class IndexPopulator(Populator):
             elif line.startswith("For more information about Russell Indexes call us"):
                 break
             else:
-                symbol = line.split()[-1]
-                name = " ".join(line.split()[0:-1])
-                stock_list[symbol] = {'name': name, 'symbol': symbol,}
-                #writer.writerow((ticker, company))
+                # Break out early if we're given count
+                if self.count and idx >= self.count:
+                    break
+                else:
+                    symbol = line.split()[-1]
+                    name = " ".join(line.split()[0:-1])
+                    stock_list[symbol] = {'name': name, 'symbol': symbol,}
+                    idx += 1
+                    #writer.writerow((ticker, company))
 
         return stock_list
 

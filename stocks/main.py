@@ -360,23 +360,39 @@ def main(filename):
             if label not in values:
                 found_labels = False
 
+        # Keep "good" companies here
         if keep and found_labels:
             stock_picks[stock] = values
+
+        # Keep all companies here
+        stock_all[stock] = values
 
         # Each iteration assumes we're keeping the stock, until we filter it out.
         keep = True
         found_labels = True
 
-    stock_values = stock_picks
-
     print("\nWriting values to file...")
+    write_picks(stock_all, all_file)
+    write_picks(stock_picks, picks_file)
+
+    if stock_picks:
+        print("Found {0} results: localc {1}".format(len(stock_picks),
+                                                     picks_file))
+    else:
+        print("No results.")
+
+    print("All results: localc {0}".format(all_file))
+    print("\nDone.\n")
+
+def write_picks(stock_values, results_file):
+    """
+    Given stocks and an output file, write the CSV
+    """
     if stock_values:
         # Write out values to CSV file
         with open(results_file, 'w') as csvfile:
-            #writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
             writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
             # get header values
-            #print(stock_values[list(stock_values.keys())[0]])
             headers = list(stock_values[list(stock_values.keys())[0]].keys())
             headers.insert(0, "Symbol")
             writer.writerow(headers)
@@ -388,12 +404,6 @@ def main(filename):
                 #writer.writerow(n + values)
                 stats.insert(0, n)
                 writer.writerow(stats)
-        print("Found {0} results: localc {1}".format(len(stock_values),
-                                                     results_file))
-    else:
-        print("No results.")
-
-    print("\nDone.\n")
 
 if __name__ == '__main__':
     main("sp1.csv")
