@@ -1,7 +1,6 @@
 import logging
-from sqlalchemy import Sequence
-from sqlalchemy import ForeignKey
-from sqlalchemy import Column, Integer, String, Float, Boolean, Date
+from sqlalchemy import Column, Integer, String, Float, Boolean, Date, \
+        Sequence, ForeignKey
 from sqlalchemy.orm import relationship, backref
 from stocks.db import Base
 
