@@ -63,7 +63,8 @@ def populate_indicators(stock_values):
         inds = {}
         for ind, val in indicators.items():
             if ind.startswith("Checked"):
-                if val:
+                if val == 'X':
+                    count += 1
                     inds['buy'] = True
                 else:
                     inds['buy'] = False
