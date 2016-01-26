@@ -310,7 +310,7 @@ def progressbar(total_threads):
     while True:
         yield from asyncio.sleep(0.1)
         print ("\r",  "Populating stocks: %s/%s" % (end_worker_threads+1,
-                                                    total_threads+1), end="")
+                                                    total_threads), end="")
 
 def main(filename):
     global stock_values

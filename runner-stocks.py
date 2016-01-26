@@ -30,14 +30,17 @@ def start(debug):
 
 
 @click.command()
+@click.option('--outfile', '-o',
+              default="indexdata.csv",
+              help='Outfile for index data.')
 @click.option('--index', '-i',
               default="sp500",
               help='The index to import [sp500|r3k]')
-def fetch(index):
+def fetch(index, outfile):
     """
     Fetch the stocks into a CSV file, given an index.
     """
-    populate_index(index)
+    populate_index(index, outfile=outfile)
 
 
 @click.command()
