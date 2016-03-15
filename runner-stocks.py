@@ -81,5 +81,6 @@ if __name__ == '__main__':
     global logger
     try:
         start()
-    except ConnectionError:
+    except ConnectionError as e:
         logger.error("Populator could not connect.  Exiting.")
+        raise
