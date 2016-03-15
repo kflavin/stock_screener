@@ -17,7 +17,9 @@ logger = logging.getLogger(__name__)
 
 class IndexPopulator(Populator):
     """
-    Russell 3000 populator.  Pulls all symbols from a PDF on the Russell page.
+    Russell 3000 populator.
+
+    No longer pulls the CSV from the russell page, as the link isn't available.
     """
 
     #url = 'http://www.russell.com/documents/indexes/membership/membership-russell-3000.pdf'
@@ -107,6 +109,9 @@ class IndexPopulator(Populator):
         """
         Fetch page, build list, write CSV
         """
-        page = self.fetch_data(self.url)
-        stock_list = self.pop_stock_list(page)
-        self.write_csv(stock_list)
+        #page = self.fetch_data(self.url)
+        #stock_list = self.pop_stock_list(page)
+        #self.write_csv(stock_list)
+
+        # Just return the local file until we can find a replacement.
+        pass
