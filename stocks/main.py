@@ -108,7 +108,7 @@ def build_values(key_stats, industry_details, estimates, stock):
                                    "time_rtq_ticker"}
                                   )[0].find_next().get_text()
     except IndexError:
-        logger.info("Failed to retrieve2 %s" % str(stock))
+        logger.info("Failed to build values %s" % str(stock))
         curr_price = "-"
 
     # Find all matches from the data
@@ -175,7 +175,7 @@ def do_work(stock):
             industry_details = yield from industry_response.read()
             estimates = yield from estimate_response.read()
         except Exception as e:
-            logger.info("Failed to retrieve1 %s" % str(stock))
+            logger.info("Failed to stock %s" % str(stock))
             key_stats = ""
             industry_details = ""
             estimates = ""
@@ -341,7 +341,9 @@ def main(filename):
 
     # Prior to filtering out the stocks we want, store the indicators in the
     # database
+    print("\nPopulating database...")
     populate_indicators(stock_values)
+    print("Done.")
 
     # Apply filtering.  Keep the stocks we want in stock_picks
     keep, found_labels = True, True

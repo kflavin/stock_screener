@@ -1,5 +1,6 @@
 import logging
 import click
+import sys
 from stocks.main import main
 from stocks.populate import populate_index
 from requests import ConnectionError
@@ -63,7 +64,7 @@ def populate(infile):
               help='Specify an output file to save index data.')
 @click.option('--count', '-c',
               type=click.INT,
-              help='Number of stocks to import.')
+              help='Number of stocks to import.  An index of random is fixed at 10')
 def run(index, ofile, count):
     """
     Full run.  Fetch the index, populate index, populate database.
@@ -78,9 +79,8 @@ start.add_command(fetch)
 start.add_command(run)
 
 if __name__ == '__main__':
-    global logger
     try:
         start()
     except ConnectionError as e:
-        logger.error("Populator could not connect.  Exiting.")
+        print("Populator could not connect.  Exiting.")
         raise
