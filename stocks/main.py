@@ -11,7 +11,7 @@ from stocks.config import *
 
 logger = logging.getLogger(__name__)
 
-sem = asyncio.Semaphore(20)
+sem = asyncio.Semaphore(1)
 
 
 def get_field(line, field, delimiter=","):
@@ -107,9 +107,10 @@ def build_values(key_stats, industry_details, estimates, stock):
                                   {"class":
                                    "time_rtq_ticker"}
                                   )[0].find_next().get_text()
-    except IndexError:
+    except IndexError as e:
         logger.info("Failed to build values %s" % str(stock))
         curr_price = "-"
+        raise
 
     # Find all matches from the data
     consumed = False
@@ -162,20 +163,33 @@ def do_work(stock):
     """
     global stock_values, sem, start_worker_threads, end_worker_threads, total_threads
     start_worker_threads += 1
+    headers = {'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0'}
 
     with (yield from sem):
         try:
             # Request data
-            key_response = yield from aiohttp.request('GET', url % stock.symbol)
-            industry_response = yield from aiohttp.request('GET', id_url % stock.symbol)
-            estimate_response = yield from aiohttp.request('GET', ae_url % stock.symbol)
+            logger.debug("Retrieving {0}".format(url % stock.symbol))
+            key_response = yield from aiohttp.request('GET', url %
+                                                      stock.symbol,
+                                                      headers=headers)
+            logger.debug("Retrieving {0}".format(id_url % stock.symbol))
+            industry_response = yield from aiohttp.request('GET', id_url %
+                                                           stock.symbol,
+                                                           headers=headers)
+            logger.debug("Retrieving {0}".format(ae_url % stock.symbol))
+            estimate_response = yield from aiohttp.request('GET', ae_url %
+                                                           stock.symbol,
+                                                           headers=headers)
 
             # Read data
             key_stats = yield from key_response.read()
             industry_details = yield from industry_response.read()
             estimates = yield from estimate_response.read()
+            logger.debug("key_stats: {0} \nindustry_stats: {1}\n"
+                         " estimate_stats: {2}\n".format(key_stats,
+                         industry_stats, estimate_stats))
         except Exception as e:
-            logger.info("Failed to stock %s" % str(stock))
+            logger.info("Failed to build stock %s" % str(stock))
             key_stats = ""
             industry_details = ""
             estimates = ""

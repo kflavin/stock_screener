@@ -79,7 +79,7 @@ class IndexPopulator(Populator):
                 break
             else:
                 # Break out early if we're given count
-                if self.count and idx >= self.count:
+                if self.count and idx > self.count:
                     break
                 else:
                     symbol = line.split()[-1]
