@@ -4,6 +4,7 @@ import requests
 import csv
 from collections import OrderedDict
 import os
+import sys
 import subprocess
 import atexit
 from io import BytesIO
@@ -21,7 +22,8 @@ class IndexPopulator(Populator):
     No longer pulls the CSV from the russell page, as the link isn't available.
     """
 
-    url = 'http://www.russell.com/documents/indexes/membership/membership-russell-3000.pdf'
+    #url = 'http://www.russell.com/documents/indexes/membership/membership-russell-3000.pdf'
+    url = 'https://www.russell.com/documents/indexes/membership/membership-russell-3000.pdf'
 
     def __init__(self, outfile, count=None):
         """
@@ -48,8 +50,11 @@ class IndexPopulator(Populator):
 
         output = subprocess.Popen([pdf_command, "-raw", pdf_file.name, self.outfile], stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
 
+
         if output[1]:
-            raise(output[1])
+            print(output[1])
+            print("Could not process PDF output.")
+            sys.exit(1)
 
 
         with open(self.outfile, "r") as f:
@@ -74,7 +79,7 @@ class IndexPopulator(Populator):
                 break
             else:
                 # Break out early if we're given count
-                if self.count and idx >= self.count:
+                if self.count and idx > self.count:
                     break
                 else:
                     symbol = line.split()[-1]

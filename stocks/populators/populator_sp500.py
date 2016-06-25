@@ -48,7 +48,7 @@ class IndexPopulator(Populator):
 
         for idx,tr in enumerate(table('tr')):
             # If we specified a maximum number of stocks.
-            if self.count and idx >= self.count:
+            if self.count and idx > self.count:
                 break
 
             if tr.td:
