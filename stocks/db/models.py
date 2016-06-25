@@ -41,7 +41,8 @@ class Indicators(Base):
     __tablename__ = 'indicators'
     id = Column(Integer, Sequence('indicator_id_seq'), primary_key=True)
     date = Column(Date)     # Date
-    buy = Column(Boolean)   # Is it a buy?
+    buy = Column(Boolean)   # Is it a buy NOW?
+    buyable = Column(Boolean)   # Is it a buyable?
     roe = Column(Float)     # Return on Equity
     fcf = Column(Float, nullable=True)   # Free Cash Flow
     pm = Column(Float)      # Profit Margin(%)
@@ -67,6 +68,7 @@ class Indicators(Base):
                 " company='%s',"
                 " date='%s',"
                 " buy='%s',"
+                " buyable='%s',"
                 " roe='%s',"
                 " pm='%s',"
                 " om='%s',"
@@ -79,6 +81,7 @@ class Indicators(Base):
                 ")>" % (self.company.symbol,
                         self.date,
                         self.buy,
+                        self.buyable,
                         self.roe,
                         self.pm,
                         self.om,

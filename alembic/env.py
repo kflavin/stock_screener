@@ -19,6 +19,7 @@ from stocks.db import Base
 from stocks.db.models import Company, Indicators
 target_metadata = Base.metadata
 
+
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
@@ -38,11 +39,8 @@ def run_migrations_offline():
 
     """
     url = config.get_main_option("sqlalchemy.url")
-    # to generate initial tables: include_schemas=True,
-    context.configure(url=url,
-                      target_metadata=target_metadata,
-                      compare_type=True,
-                      literal_binds=True)
+    context.configure(
+        url=url, target_metadata=target_metadata, literal_binds=True)
 
     with context.begin_transaction():
         context.run_migrations()
@@ -60,11 +58,9 @@ def run_migrations_online():
         prefix='sqlalchemy.',
         poolclass=pool.NullPool)
 
-    # to generate initial tables: include_schemas=True,
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
-            compare_type=True,
             target_metadata=target_metadata
         )
 
