@@ -19,5 +19,5 @@ pycparser==2.14
 pyflakes==1.0.0
 pytest==2.8.5
 python-editor==0.5
-requests==2.9.1
+requests==2.20.0
 six==1.10.0
